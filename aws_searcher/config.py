@@ -4,9 +4,13 @@ Configuration file for global variables and settings
 USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) ' \
              'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36'
 
-# noss id is always 1 or 2
+AMAZON_INITIAL_REFERENCE = "nb_sb_noss_"
+PAGINATION_BASED_REFERENCE = "src_pg_"
+
+AMAZON_BASE_URL = 'https://www.amazon.com'
 AMAZON_SEARCH_URL_TEMPLATE = "https://www.amazon.com/s/ref=" \
-                             "nb_sb_noss_{noss_id}?url={category}&field-keywords={search}"
+                             "{reference}{page_number}?url={category}" \
+                             "&page={page_number}&field-keywords={search}"
 
 CATEGORIES_DICT = {'Alexa Skills': 'search-alias=alexa-skills',
                    'All Departments': 'search-alias=aps',
