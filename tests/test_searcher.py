@@ -60,7 +60,7 @@ def test_get_amazon_search_result():
               'url=search-alias=sporting&page=1&field-keywords=oakley',
               text="<div id='test'>Wieners!</div>")
 
-        soup = searcher._get_amazon_search_result('Sports & Outdoors', 'Oakley')
+        soup = searcher.get_amazon_search_result('Sports & Outdoors', 'Oakley')
 
         assert soup.find('div', {'id': 'test'}).text == 'Wieners!'
 
@@ -69,7 +69,7 @@ def test_get_amazon_search_result():
               'url=search-alias=sporting&page=16&field-keywords=oakley',
               text="<div id='test'>Wieners!</div>")
 
-        soup = searcher._get_amazon_search_result('Sports & Outdoors', 'Oakley', 16)
+        soup = searcher.get_amazon_search_result('Sports & Outdoors', 'Oakley', 16)
 
         assert soup.find('div', {'id': 'test'}).text == 'Wieners!'
 
@@ -82,7 +82,7 @@ def test_collect_target_pages_from_search_response(_soup_fixture):
         _soup_fixture: Dummy BeautifulSoup object
 
     """
-    urls = searcher._collect_target_pages_from_search_response(_soup_fixture)
+    urls = searcher.collect_target_pages_from_search_response(_soup_fixture)
 
     assert urls['tacos'] == 'https://www.amazon.com/dp/tacos'
 
@@ -109,5 +109,9 @@ def test_scan_detail_page_for_asin(_amazon_detail_page_with_asins):
     Test that _scan_detail_page_for_asin
 
     """
-    extra_asins = searcher._scan_detail_page_for_asin(_amazon_detail_page_with_asins)
-    assert extra_asins == ['B00G7NKJF0', 'B00G7NKKW2', 'B00G7NKMZ2', 'B00G7NKLRQ']
+    extra_asins = searcher.scan_detail_page_for_asin(_amazon_detail_page_with_asins)
+    expected_asins = ['B00G7NKJF0', 'B00G7NKKW2', 'B00G7NKMZ2', 'B00G7NKLRQ']
+    assert sorted(
+        list(extra_asins.values())) == sorted([searcher.urljoin(searcher.config.AMAZON_BASE_URL,
+                                                               'dp/' + asin)
+                                               for asin in expected_asins])
