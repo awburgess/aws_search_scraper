@@ -12,6 +12,26 @@ AMAZON_SEARCH_URL_TEMPLATE = "https://www.amazon.com/s/ref=" \
                              "{reference}{page_number}?url={category}" \
                              "&page={page_number}&field-keywords={search}"
 
+ITEM_ATTRIBUTE_KEY_LIST = ['Product', 'AttributeSets', 'ItemAttributes']
+ASIN_KEY_LIST = ['ASIN', 'value']
+
+TARGET_KEYS = {
+    'asin': ASIN_KEY_LIST,
+    'brand': ITEM_ATTRIBUTE_KEY_LIST + ['Brand', 'value'],
+    'product': ITEM_ATTRIBUTE_KEY_LIST + ['Title', 'value'],
+    'price': ITEM_ATTRIBUTE_KEY_LIST + ['ListPrice', 'Amount', 'value'],
+    'currency': ITEM_ATTRIBUTE_KEY_LIST + ['ListPrice', 'CurrencyCode', 'value']
+}
+
+RELATIONSHIP_KEYS = {
+    'asin': ASIN_KEY_LIST,
+    'related_asin': ['Identifiers', 'MarketplaceASIN', 'ASIN', 'value'],
+}
+
+MARKETPLACE_IDS = {
+    'US': 'ATVPDKIKX0DER'
+}
+
 CATEGORIES_DICT = {'Alexa Skills': 'search-alias=alexa-skills',
                    'All Departments': 'search-alias=aps',
                    'Amazon Devices': 'search-alias=amazon-devices',

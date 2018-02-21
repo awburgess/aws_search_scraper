@@ -115,3 +115,35 @@ def test_scan_detail_page_for_asin(_amazon_detail_page_with_asins):
         list(extra_asins.values())) == sorted([searcher.urljoin(searcher.config.AMAZON_BASE_URL,
                                                                'dp/' + asin)
                                                for asin in expected_asins])
+
+
+def test_get_pagination():
+    """
+    Test get_pagination
+
+    """
+    test_page = searcher.Path(__file__).parent / 'resources' / 'oakley_landing_page.htm'
+    with test_page.open() as infile:
+        soup = searcher.BeautifulSoup(infile.read(), 'lxml')
+
+    page_number = searcher.get_pagination(soup) == 79
+
+
+def test_serialize_to_csv(tmpdir):
+    """
+    Test serialize_to_csv
+
+    """
+    file = searcher.Path(str(tmpdir.join('dummy.csv')))
+
+    data = [{'name': 'Aaron', 'age': '38'},
+            {'name': 'Michelle', 'age': '32'}]
+
+    searcher.serialize_to_csv(data, file)
+
+    with file.open() as infile:
+        reader = searcher.csv.DictReader(infile)
+        assert reader.fieldnames == ['name', 'age']
+
+        for count, line in enumerate(reader):
+            assert line == data[count]

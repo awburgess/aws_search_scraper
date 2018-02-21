@@ -18,6 +18,8 @@ from bs4 import BeautifulSoup
 import aws_searcher.config as config
 from aws_searcher.logger import logger
 
+import aws_searcher.mws_api as api
+
 LOGGER = logger('aws_scanner')
 
 
@@ -83,6 +85,9 @@ def collect_target_pages_from_search_response(soup: BeautifulSoup) -> dict:
             for url in urls}
 
 
+# TODO: May need to derive from sellers (may not be directly present on page even)
+# TODO: Also condition for used (do new & used)
+# TODO: Capture shipping & tax if present
 def _extract_price(soup: BeautifulSoup) -> str:
     """
     Extract the price from the amazon page
@@ -113,6 +118,7 @@ def _extract_brand(soup: BeautifulSoup) -> str:
     return re.findall(r'(?<=bin=).+$', image_brand_group.find('a')['href'])[0]
 
 
+# TODO: Parent title, need specific name (child title)
 def _extract_product_name(soup: BeautifulSoup) -> str:
     """
     Extract the product name (e.g. Roger's Big Ol' Dildos)
@@ -194,7 +200,7 @@ def scan_detail_page_for_asin(soup: BeautifulSoup) -> dict:
     return {asin: urljoin(config.AMAZON_BASE_URL, 'dp/' + asin) for asin in all_asins}
 
 
-def timeout(floor: int = 2, ceiling: int = 6) -> NoReturn:
+def timeout(floor: int = 2, ceiling: int = 6) -> NoReturn:  # pragma: no cover
     """
     Invoke time.sleep at randomly timed intervals
 
@@ -229,7 +235,22 @@ def serialize_to_csv(data: List[dict], file_path: Path,
         writer.writerows(data)
 
 
-def dry_hump_run(category: str, search_terms: str, test_write_path: Path) -> NoReturn:
+def get_pagination(soup: BeautifulSoup) -> int:
+    """
+    Parse Amazon search result page and find last page number of results so
+    that we know what to feed into the Queue
+
+    Args:
+        soup: BeautifulSoup object
+
+    Returns:
+        Integer representation of the last page number of result
+
+    """
+    return int(soup.find('span', {'class': 'pagnDisabled'}).text)
+
+
+def dry_hump_run(category: str, search_terms: str, test_write_path: Path) -> NoReturn:  # pragma: no cover
     """
     Semi dry run where you can target an Amazon Category using any search terms
 
@@ -244,12 +265,12 @@ def dry_hump_run(category: str, search_terms: str, test_write_path: Path) -> NoR
     """
     asin_write_path = test_write_path / 'search_page_asin_urls.csv'
     product_write_path = test_write_path / (search_terms + '.csv')
+    relationship_path = test_write_path / 'relationships.csv'
 
     LOGGER.info('Acquiring first search page')
     soup = get_amazon_search_result(category, search_terms)
 
-    LOGGER.info('Pausing to avoid detection')
-    timeout()
+    limit = get_pagination(soup)
 
     asin_dict = collect_target_pages_from_search_response(soup)
     LOGGER.info('Found %d products on page 1' % len(asin_dict.keys()))
@@ -258,30 +279,31 @@ def dry_hump_run(category: str, search_terms: str, test_write_path: Path) -> NoR
                      asin_write_path,
                      ['asin', 'url'])
 
-    asin, url = list(asin_dict.items())[0]
-    LOGGER.info('Using ASIN: %s | url: %s as test parent target' % (asin, url))
+    writerows = []
+    relative_writerows = []
 
-    product_details = []
+    for count, asin in enumerate(asin_dict):
+        LOGGER.info('Recording data for %s' % asin)
 
-    detail_soup = get_product_page(url)
-    data = parse_product_page_details(asin_dict, detail_soup, stringify=True)
+        data = api.acquire_mws_product_data(config.MARKETPLACE_IDS['US'],
+                                            [asin])
 
-    LOGGER.info('Data acquired for ASIN: %s' % asin)
-    product_details.append(data)
+        writerows = writerows + data['target_values']
+        relative_writerows = relative_writerows + data['related_asins']
 
-    sub_asin_dict = scan_detail_page_for_asin(detail_soup)
-    serialize_to_csv([{'asin': k, 'url': v} for k, v in sub_asin_dict.items()],
-                     asin_write_path, write_mode='a')
+        if not count % 10:
+            LOGGER.info('Pausing to allow API to regenerate')
+            timeout()
 
-    for sub_asin, sub_url in sub_asin_dict.items():
-        LOGGER.info('Acquiring data for ASIN: %s | URL: %s' % (sub_asin, sub_url))
-        sub_detail_soup = get_product_page(sub_url)
-        sub_data = parse_product_page_details(sub_asin_dict, sub_detail_soup, stringify=True)
-        LOGGER.info('Data acquired')
-        product_details.append(sub_data)
-        timeout()
+    LOGGER.info('Finished acquiring data, serializing output')
+    with product_write_path.open('w') as outfile:
+        writer = csv.DictWriter(outfile, writerows[0].keys())
+        writer.writeheader()
+        writer.writerows(writerows)
 
-    LOGGER.info('Serializing product info...')
-    serialize_to_csv(product_details, product_write_path)
-    LOGGER.info('Serialization complete')
-    LOGGER.info('Dry hump complete. Penetration may commence')
+    with relationship_path.open('w') as outfile2:
+        writer = csv.DictWriter(outfile2, relative_writerows[0].keys())
+        writer.writeheader()
+        writer.writerows(relative_writerows)
+
+    LOGGER.info('Run complete')
