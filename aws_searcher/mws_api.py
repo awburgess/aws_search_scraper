@@ -1,10 +1,14 @@
+"""
+Functions for accessing MWS API and handling responses
+"""
+
 from operator import getitem
 from functools import reduce
 from typing import List
 
-import aws_searcher.config as config
-
 from mws import Products
+
+import aws_searcher.config as config
 
 
 class TooManyASINS(Exception):  # pragma: no cover
@@ -122,3 +126,5 @@ def acquire_mws_product_data(marketplace: str, asins: List[str]) -> dict:  # pra
 
     return {'target_values': rows,
             'related_asins': related_asins}
+
+

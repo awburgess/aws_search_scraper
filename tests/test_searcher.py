@@ -83,8 +83,7 @@ def test_collect_target_pages_from_search_response(_soup_fixture):
 
     """
     urls = searcher.collect_target_pages_from_search_response(_soup_fixture)
-
-    assert urls['tacos'] == 'https://www.amazon.com/dp/tacos'
+    assert urls == ['tacos']
 
 
 def test_parse_product_page(_amazon_detail_page):

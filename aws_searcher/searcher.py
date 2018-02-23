@@ -4,11 +4,9 @@ parsing each result page for Product Name, Brand Name, AISN and Price
 """
 import random
 from pathlib import Path
-import json
 import csv
 import re
 from urllib.parse import urljoin, unquote
-from multiprocessing.dummy import Pool, Queue
 from typing import Union, NoReturn, List
 import time
 
@@ -69,7 +67,7 @@ def _parse_asin_link(url: str) -> str:
     return re.findall(r'/dp/.+?(?=/)', unquote(url))[0]
 
 
-def collect_target_pages_from_search_response(soup: BeautifulSoup) -> dict:
+def collect_target_pages_from_search_response(soup: BeautifulSoup) -> List[str]:
     """
     Collects all product urls and returns as list
 
@@ -77,12 +75,11 @@ def collect_target_pages_from_search_response(soup: BeautifulSoup) -> dict:
         soup: BeautifulSoup Object representing search result page
 
     Returns:
-        Dictionary with ASIN as key and url as value
+        List of ASINs
 
     """
     urls = [_parse_asin_link(a['href']) for a in soup.find_all('a', class_='s-access-detail-page')]
-    return {url.replace('/dp/', ''): urljoin(config.AMAZON_BASE_URL, url)
-            for url in urls}
+    return [url.replace('/dp/', '') for url in urls]
 
 
 # TODO: May need to derive from sellers (may not be directly present on page even)
@@ -250,7 +247,8 @@ def get_pagination(soup: BeautifulSoup) -> int:
     return int(soup.find('span', {'class': 'pagnDisabled'}).text)
 
 
-def dry_hump_run(category: str, search_terms: str, test_write_path: Path) -> NoReturn:  # pragma: no cover
+def dry_hump_run(category: str, search_terms: str,
+                 test_write_path: Path) -> NoReturn:  # pragma: no cover
     """
     Semi dry run where you can target an Amazon Category using any search terms
 
