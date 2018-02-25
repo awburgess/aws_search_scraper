@@ -88,7 +88,7 @@ def acquire_mws_product_data(marketplace: str, asins: List[str]) -> dict:  # pra
         asins: Single or list of asins to query (Max length of 5)
 
     Returns:
-        Dictionary of with two parent keys, "target_values" and "related_asins".  The
+        Dictionary of with three parent keys, "target_values", "raw_data" and "related_asins".  The
         "target_values" key will house a list of dictionaries as rows.  The related asins will
         be a list of asin strings to possibly add to Queue
     """
@@ -125,6 +125,7 @@ def acquire_mws_product_data(marketplace: str, asins: List[str]) -> dict:  # pra
         row_dict['related_asins'] = asins
 
     return {'target_values': rows,
+            'raw_data': product_data,
             'related_asins': related_asins}
 
 

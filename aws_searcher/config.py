@@ -29,6 +29,8 @@ RELATIONSHIP_KEYS = {
     'related_asin': ['Identifiers', 'MarketplaceASIN', 'ASIN', 'value'],
 }
 
+DATA_DIRECTORY = '/home/data/'
+
 MARKETPLACE_IDS = {
     'US': 'ATVPDKIKX0DER'
 }
