@@ -8,7 +8,7 @@ from typing import List
 
 from mws import Products
 
-import aws_searcher.config as config
+import config
 
 
 class TooManyASINS(Exception):  # pragma: no cover
@@ -103,29 +103,5 @@ def acquire_mws_product_data(marketplace: str, asins: List[str]) -> dict:  # pra
 
     rows = [_extract_target_data(data) for data in product_data]
 
-    related_asins = []
-
-    for data in product_data:
-        row_dict = {}
-
-        relationship_dict = data['Product']['Relationships']
-
-        row_dict['asin'] = _extract_values_by_target_keys(config.TARGET_KEYS['asin'], data)
-
-        try:
-            relationship = list(relationship_dict.keys())[0]
-            asins = _extract_asin_from_relationshp(relationship_dict,
-                                                   list(relationship_dict.keys())[0])
-        except IndexError:
-            relationship = 'asexual'
-            asins = []
-
-        row_dict['relationship'] = relationship
-
-        row_dict['related_asins'] = asins
-
     return {'target_values': rows,
-            'raw_data': product_data,
-            'related_asins': related_asins}
-
-
+            'raw_data': product_data}

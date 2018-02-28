@@ -1,19 +1,31 @@
-FROM arwineap/docker-ubuntu-python3.6
+FROM ubuntu:16.04
 
-RUN add-apt-repository 'deb http://apt.postgresql.org/pub/repos/apt/ xenial-pgdg main'
+RUN apt-get update
+RUN apt-get install -y software-properties-common
+RUN apt-get install -y wget
 
-RUN wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | \
-    sudo apt-key add - \
-    sudo apt-get update
+RUN apt-get install -y make build-essential libssl-dev zlib1g-dev
+RUN apt-get install -y libbz2-dev libreadline-dev libsqlite3-dev wget curl llvm
+RUN apt-get install -y libncurses5-dev  libncursesw5-dev xz-utils tk-dev
 
-RUN apt-get install postgres-10
+RUN wget https://www.python.org/ftp/python/3.6.3/Python-3.6.3.tgz && \
+ tar xvf Python-3.6.3.tgz && \
+ cd Python-3.6.3 && \
+ ./configure --enable-optimizations && \
+ make -j8 && \
+ make altinstall && \
+ cd ..
 
-RUN service postgresql restart
+RUN apt-get update
 
-RUN sudo -i -u postgres
-RUN psql -c "CREATE USER searcher WITH PASSWORD 'searcher' SUPERUSER"
+RUN mkdir /home/amazon
+RUN mkdir /home/amazon/data
+RUN mkdir /home/amazon/code
 
-RUN exit
+COPY . /home/amazon/code
+WORKDIR /home/amazon/code
 
+RUN pip3.6 install requirements.txt
 
+CMD []
 
