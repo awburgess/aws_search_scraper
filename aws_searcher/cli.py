@@ -28,8 +28,11 @@ def run(category, terms, market):
 
     data_dir = Path.home() / config.DATA_DIRECTORY
     db_dir = Path.home() / config.DB_DIRECTORY
+    jobs_dir = Path.home() / config.JOBS_DIRECTORY
+
     db_dir.mkdir(parents=True, exist_ok=True)
     data_dir.mkdir(parents=True, exist_ok=True)
+    jobs_dir.mkdir(parents=True, exist_ok=True)
 
     logging.info('Confirming db exists and creating job entry')
     engine = models.get_engine(db_dir / 'amazon.db')
@@ -39,14 +42,21 @@ def run(category, terms, market):
                                                                       terms=terms))
     job_id = job_record.inserted_primary_key[0]
 
+    this_job_dir = jobs_dir / str(job_id)
+
+    this_job_dir.mkdir(parents=True, exist_ok=True)
+
     output_name = '_'.join([category.lower(), terms.lower()])
 
+    logging.info("Processing page 1")
+
     first_page_dict = tasks.get_first_page(category, terms)
+    logging.info("Page processed, adding ASINs to queue")
 
     asin_queue = Queue()
     processed_queue = Queue()
-    for asin in first_page_dict['asins']:
-        asin_queue.put(asin)
+    for asin_group in tasks.grouper(5, first_page_dict['asins']):
+        asin_queue.put(asin_group)
 
     page_queue = Queue()
     pages = list(range(2, first_page_dict['last_page_number'] + 1))
@@ -85,9 +95,9 @@ def run(category, terms, market):
     tasks.remove_files(data_dir, 'txt')
     tasks.remove_files(data_dir, 'dat')
 
-    out_data_csv = data_dir / (output_name + '.csv')
-    out_relationship_csv = data_dir / (output_name + '_relationships.csv')
-    out_attributes_csv = data_dir / (output_name + '_attributes.csv')
+    out_data_csv = this_job_dir / (output_name + '.csv')
+    out_relationship_csv = this_job_dir / (output_name + '_relationships.csv')
+    out_attributes_csv = this_job_dir / (output_name + '_attributes.csv')
 
     logging.info("Saving %s" % out_data_csv)
     all_data_files.to_csv(out_data_csv.as_posix(), index=False)

@@ -8,7 +8,7 @@ from typing import List
 
 from mws import Products
 
-import config
+import aws_searcher.config as config
 
 
 class TooManyASINS(Exception):  # pragma: no cover

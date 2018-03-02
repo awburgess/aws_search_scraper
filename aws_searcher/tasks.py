@@ -7,8 +7,11 @@ from pathlib import Path
 from queue import Queue
 import json
 import logging
+import itertools
 
-import searcher, config, mws_api
+import aws_searcher.searcher as searcher
+import aws_searcher.config as config
+import aws_searcher.mws_api as mws_api
 
 
 def get_asin_data(asin_list: List[str], marketplace_id: str) -> Dict[str, list]:
@@ -144,15 +147,18 @@ def extract_relationships_from_json(asin: str, relationship_dict: dict) -> List[
         relationship_dict: Dictionary with relatinships as parent or list of children
 
     Returns:
-        List of dictionary with asin,  child or parent, and parent (empty string if asin is parent)
+        List of dictionary with asin,  child or parent, and parent (empty string if asin is parent
+        or orphan)
 
     """
+    if not relationship_dict:
+        return [{'asin': asin, 'relationship': 'stand-alone', 'relative': ''}]
     relationship = list(relationship_dict.keys())[0]
     related_asins_list = mws_api._extract_asin_from_relationshp(relationship_dict, relationship)
     if relationship == 'VariationParent':
-        return [{'asin': asin, 'relationship': relationship, 'parent': related_asins_list[0]}]
+        return [{'asin': asin, 'relationship': 'child', 'relative': related_asins_list[0]}]
     else:
-        return [{'asin': related_asins, 'relationship': relationship, 'parent': asin}
+        return [{'asin': related_asins, 'relationship': 'parent', 'relative': asin}
                 for related_asins in related_asins_list]
 
 
@@ -189,6 +195,21 @@ def remove_files(data_dir: Path, extension: str) -> NoReturn:
         file.unlink()
 
 
+def grouper(n, iterable) -> List[List[str]]:
+    """
+    Break a list into sublists of n values
+
+    Args:
+        n: Number of values per sublist (will make shorter list if n not possible)
+        iterable: iterable of values
+
+    Returns:
+        List of sublists divided into n groupings
+    """
+    args = [iter(iterable)] * n
+    return list(([e for e in t if e is not None] for t in itertools.zip_longest(*args)))
+
+
 def page_worker(page_q: Queue, asin_q: Queue, processed_q: Queue):
     """
     Worker function for threading out asins from website pages
@@ -208,9 +229,14 @@ def page_worker(page_q: Queue, asin_q: Queue, processed_q: Queue):
 
         logging.info("Page processed, adding ASINs to queue")
 
-        for asin in asin_list:
-            if asin not in processed_q.queue:
-                asin_q.put(asin)
+        sub_groups = grouper(5, asin_list)
+
+        for group in sub_groups:
+            for asin in group:
+                if asin not in processed_q.queue:
+                    group.remove(asin)
+            if group:
+                asin_q.put(group)
         page_q.task_done()
 
 
@@ -225,30 +251,20 @@ def api_worker(asin_q: Queue, processed_q: Queue, marketplace_id: str):
 
     """
     while True:
-        asins = []
-        for x in range(5):
-            if asin_q.empty():
-                break
-            queue_asin = asin_q.get()
-            if queue_asin not in processed_q.queue:
-                asins.append(queue_asin)
+        queue_asin = asin_q.get()
 
-        if not asins:
-            continue
-
-        asins = list(set(asins))
-
-        log_asins = ', '.join(asins)
+        log_asins = ', '.join(queue_asin)
 
         logging.info("Processing ASINs: %s" % log_asins)
 
         try:
-            asin_data_dict = mws_api.acquire_mws_product_data(marketplace_id, asins)
-        except:
+            asin_data_dict = mws_api.acquire_mws_product_data(marketplace_id, queue_asin)
+        except Exception as e:
+            logging.error(e)
             logging.warning("API is throttling")
             logging.warning("Pausing for a minute")
-            for asin in asins:
-                asin_q.put(asin)
+            asin_q.task_done()
+            asin_q.put(queue_asin)
             searcher.time.sleep(60)
             continue
 
@@ -265,8 +281,9 @@ def api_worker(asin_q: Queue, processed_q: Queue, marketplace_id: str):
             attributes.append(flatten_item_attributes(
                 data['Product']['AttributeSets']['ItemAttributes']
             ))
-            relationships.append(extract_relationships_from_json(data['ASIN']['value'],
-                                                                 data['Product']['Relationships']))
+            relationships = relationships + extract_relationships_from_json(data['ASIN']['value'],
+                                                                            data['Product'][
+                                                                                'Relationships'])
 
         write_path = Path.home() / config.DATA_DIRECTORY
 
@@ -286,11 +303,17 @@ def api_worker(asin_q: Queue, processed_q: Queue, marketplace_id: str):
         serialize_data_to_csv(asin_data_dict['target_values'], write_path)
         logging.info('Saved target values')
 
-        for asin in asins:
+        for asin in queue_asin:
             processed_q.put(asin, block=False)
 
-        for related_dict in relationships:
-            if related_dict['asin'] not in processed_q.queue:
-                processed_q.put(related_dict['asin'], block=False)
+        related_asins = [related_dict['asin'] for related_dict in relationships]
+        asins_add = grouper(5, related_asins)
+
+        for group in asins_add:
+            for asin in group:
+                if asin in processed_q.queue:
+                    group.remove(asin)
+            if group:
+                asin_q.put(group)
 
         asin_q.task_done()

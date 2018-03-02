@@ -9,14 +9,13 @@ import re
 from urllib.parse import urljoin, unquote
 from typing import Union, NoReturn, List
 import time
+from itertools import chain
 
 import requests
 from bs4 import BeautifulSoup
 
-import config
-from logger import logger
-
-import mws_api as api
+from aws_searcher.logger import logger
+import aws_searcher.config as config
 
 LOGGER = logger('aws_scanner')
 
@@ -224,7 +223,7 @@ def serialize_to_csv(data: List[dict], file_path: Path,
         write_mode: Indicate whether this should be a single write or append
 
     """
-    headers = list(set(list(row.keys()) for row in data))
+    headers = list(set(chain(*[list(row.keys()) for row in data])))
     with file_path.open(write_mode) as outfile:
         headers = headers if not declared_headers else declared_headers
         writer = csv.DictWriter(outfile, headers)

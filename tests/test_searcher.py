@@ -142,7 +142,7 @@ def test_serialize_to_csv(tmpdir):
 
     with file.open() as infile:
         reader = searcher.csv.DictReader(infile)
-        assert reader.fieldnames == ['name', 'age']
+        assert sorted(reader.fieldnames) == sorted(['name', 'age'])
 
         for count, line in enumerate(reader):
             assert line == data[count]
