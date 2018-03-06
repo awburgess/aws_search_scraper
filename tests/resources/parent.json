@@ -1,0 +1,28 @@
+{
+  "VariationChildren": [
+    {
+      "Identifiers": {
+        "MarketplaceASIN": {
+          "MarketplaceId": {
+            "value": "ATVPDKIKX0DER"
+          },
+          "ASIN": {
+            "value": "B01JWPQ2W8"
+          }
+        }
+      }
+    },
+    {
+      "Identifiers": {
+        "MarketplaceASIN": {
+          "MarketplaceId": {
+            "value": "ATVPDKIKX0DER"
+          },
+          "ASIN": {
+            "value": "B01JWPQ2W8"
+          }
+        }
+      }
+    }
+  ]
+}

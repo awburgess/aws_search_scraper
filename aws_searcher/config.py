@@ -2,7 +2,8 @@
 Configuration file for global variables and settings
 """
 REQUEST_HEADERS = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) '
-             'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36'}
+                                 'AppleWebKit/537.36 (KHTML, like Gecko) '
+                                 'Chrome/63.0.3239.132 Safari/537.36'}
 
 AMAZON_INITIAL_REFERENCE = "nb_sb_noss_"
 PAGINATION_BASED_REFERENCE = "src_pg_"
@@ -27,6 +28,10 @@ RELATIONSHIP_KEYS = {
     'asin': ASIN_KEY_LIST,
     'related_asin': ['Identifiers', 'MarketplaceASIN', 'ASIN', 'value'],
 }
+
+DATA_DIRECTORY = 'mws/data'
+DB_DIRECTORY = 'mws/db'
+JOBS_DIRECTORY = 'mws/jobs'
 
 MARKETPLACE_IDS = {
     'US': 'ATVPDKIKX0DER'

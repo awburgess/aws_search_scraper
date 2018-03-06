@@ -4,6 +4,7 @@ Unit tests for searcher.py
 
 import pytest
 import requests_mock
+from typing import NoReturn
 
 import aws_searcher.searcher as searcher
 
@@ -83,8 +84,7 @@ def test_collect_target_pages_from_search_response(_soup_fixture):
 
     """
     urls = searcher.collect_target_pages_from_search_response(_soup_fixture)
-
-    assert urls['tacos'] == 'https://www.amazon.com/dp/tacos'
+    assert urls == ['tacos']
 
 
 def test_parse_product_page(_amazon_detail_page):
@@ -143,7 +143,7 @@ def test_serialize_to_csv(tmpdir):
 
     with file.open() as infile:
         reader = searcher.csv.DictReader(infile)
-        assert reader.fieldnames == ['name', 'age']
+        assert sorted(reader.fieldnames) == sorted(['name', 'age'])
 
         for count, line in enumerate(reader):
             assert line == data[count]

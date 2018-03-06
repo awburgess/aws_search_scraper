@@ -4,21 +4,18 @@ parsing each result page for Product Name, Brand Name, AISN and Price
 """
 import random
 from pathlib import Path
-import json
 import csv
 import re
 from urllib.parse import urljoin, unquote
-from multiprocessing.dummy import Pool, Queue
 from typing import Union, NoReturn, List
 import time
+from itertools import chain
 
 import requests
 from bs4 import BeautifulSoup
 
-import aws_searcher.config as config
 from aws_searcher.logger import logger
-
-import aws_searcher.mws_api as api
+import aws_searcher.config as config
 
 LOGGER = logger('aws_scanner')
 
@@ -69,7 +66,7 @@ def _parse_asin_link(url: str) -> str:
     return re.findall(r'/dp/.+?(?=/)', unquote(url))[0]
 
 
-def collect_target_pages_from_search_response(soup: BeautifulSoup) -> dict:
+def collect_target_pages_from_search_response(soup: BeautifulSoup) -> List[str]:
     """
     Collects all product urls and returns as list
 
@@ -77,17 +74,13 @@ def collect_target_pages_from_search_response(soup: BeautifulSoup) -> dict:
         soup: BeautifulSoup Object representing search result page
 
     Returns:
-        Dictionary with ASIN as key and url as value
+        List of ASINs
 
     """
     urls = [_parse_asin_link(a['href']) for a in soup.find_all('a', class_='s-access-detail-page')]
-    return {url.replace('/dp/', ''): urljoin(config.AMAZON_BASE_URL, url)
-            for url in urls}
+    return [url.replace('/dp/', '') for url in urls]
 
 
-# TODO: May need to derive from sellers (may not be directly present on page even)
-# TODO: Also condition for used (do new & used)
-# TODO: Capture shipping & tax if present
 def _extract_price(soup: BeautifulSoup) -> str:
     """
     Extract the price from the amazon page
@@ -101,7 +94,7 @@ def _extract_price(soup: BeautifulSoup) -> str:
     return soup.find('span', {'id': 'priceblock_ourprice'}).text
 
 
-def _extract_brand(soup: BeautifulSoup) -> str:
+def _extract_brand(soup: BeautifulSoup) -> str:  # pragma: no cover
     """
     Extract brand name (Or byline if not by authentic seller)
 
@@ -118,7 +111,6 @@ def _extract_brand(soup: BeautifulSoup) -> str:
     return re.findall(r'(?<=bin=).+$', image_brand_group.find('a')['href'])[0]
 
 
-# TODO: Parent title, need specific name (child title)
 def _extract_product_name(soup: BeautifulSoup) -> str:
     """
     Extract the product name (e.g. Roger's Big Ol' Dildos)
@@ -132,7 +124,7 @@ def _extract_product_name(soup: BeautifulSoup) -> str:
     return soup.find('span', {'id': 'productTitle'}).text.strip()
 
 
-def _extract_sellers(soup: BeautifulSoup) -> List[str]:
+def _extract_sellers(soup: BeautifulSoup) -> List[str]:  # pragma: no cover
     """
     Extract the names of sellers
 
@@ -151,7 +143,7 @@ def _extract_sellers(soup: BeautifulSoup) -> List[str]:
 
 
 def parse_product_page_details(asin_dictionary: dict, page: BeautifulSoup,
-                               stringify: bool = False) -> dict:
+                               stringify: bool = False) -> dict:  # pragma: no cover
     """
     Parse the desired details from a given page
 
@@ -227,8 +219,9 @@ def serialize_to_csv(data: List[dict], file_path: Path,
         write_mode: Indicate whether this should be a single write or append
 
     """
+    headers = list(set(chain(*[list(row.keys()) for row in data])))
     with file_path.open(write_mode) as outfile:
-        headers = data[0].keys() if not declared_headers else declared_headers
+        headers = headers if not declared_headers else declared_headers
         writer = csv.DictWriter(outfile, headers)
         if write_mode == 'w':
             writer.writeheader()
@@ -249,61 +242,3 @@ def get_pagination(soup: BeautifulSoup) -> int:
     """
     return int(soup.find('span', {'class': 'pagnDisabled'}).text)
 
-
-def dry_hump_run(category: str, search_terms: str, test_write_path: Path) -> NoReturn:  # pragma: no cover
-    """
-    Semi dry run where you can target an Amazon Category using any search terms
-
-    Args:
-        category: Amazon Category name (as it appears in browser)
-        search_terms: Search terms you want
-        test_write_path: Directory Path to write results to
-
-    Returns:
-        Examples of data found and find data collected
-
-    """
-    asin_write_path = test_write_path / 'search_page_asin_urls.csv'
-    product_write_path = test_write_path / (search_terms + '.csv')
-    relationship_path = test_write_path / 'relationships.csv'
-
-    LOGGER.info('Acquiring first search page')
-    soup = get_amazon_search_result(category, search_terms)
-
-    limit = get_pagination(soup)
-
-    asin_dict = collect_target_pages_from_search_response(soup)
-    LOGGER.info('Found %d products on page 1' % len(asin_dict.keys()))
-
-    serialize_to_csv([{'asin': k, 'url': v} for k, v in asin_dict.items()],
-                     asin_write_path,
-                     ['asin', 'url'])
-
-    writerows = []
-    relative_writerows = []
-
-    for count, asin in enumerate(asin_dict):
-        LOGGER.info('Recording data for %s' % asin)
-
-        data = api.acquire_mws_product_data(config.MARKETPLACE_IDS['US'],
-                                            [asin])
-
-        writerows = writerows + data['target_values']
-        relative_writerows = relative_writerows + data['related_asins']
-
-        if not count % 10:
-            LOGGER.info('Pausing to allow API to regenerate')
-            timeout()
-
-    LOGGER.info('Finished acquiring data, serializing output')
-    with product_write_path.open('w') as outfile:
-        writer = csv.DictWriter(outfile, writerows[0].keys())
-        writer.writeheader()
-        writer.writerows(writerows)
-
-    with relationship_path.open('w') as outfile2:
-        writer = csv.DictWriter(outfile2, relative_writerows[0].keys())
-        writer.writeheader()
-        writer.writerows(relative_writerows)
-
-    LOGGER.info('Run complete')

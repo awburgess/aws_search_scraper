@@ -1,10 +1,14 @@
+"""
+Functions for accessing MWS API and handling responses
+"""
+
 from operator import getitem
 from functools import reduce
 from typing import List
 
-import aws_searcher.config as config
-
 from mws import Products
+
+import aws_searcher.config as config
 
 
 class TooManyASINS(Exception):  # pragma: no cover
@@ -84,7 +88,7 @@ def acquire_mws_product_data(marketplace: str, asins: List[str]) -> dict:  # pra
         asins: Single or list of asins to query (Max length of 5)
 
     Returns:
-        Dictionary of with two parent keys, "target_values" and "related_asins".  The
+        Dictionary of with three parent keys, "target_values", "raw_data" and "related_asins".  The
         "target_values" key will house a list of dictionaries as rows.  The related asins will
         be a list of asin strings to possibly add to Queue
     """
@@ -99,26 +103,5 @@ def acquire_mws_product_data(marketplace: str, asins: List[str]) -> dict:  # pra
 
     rows = [_extract_target_data(data) for data in product_data]
 
-    related_asins = []
-
-    for data in product_data:
-        row_dict = {}
-
-        relationship_dict = data['Product']['Relationships']
-
-        row_dict['asin'] = _extract_values_by_target_keys(config.TARGET_KEYS['asin'], data)
-
-        try:
-            relationship = list(relationship_dict.keys())[0]
-            asins = _extract_asin_from_relationshp(relationship_dict,
-                                                   list(relationship_dict.keys())[0])
-        except IndexError:
-            relationship = 'asexual'
-            asins = []
-
-        row_dict['relationship'] = relationship
-
-        row_dict['related_asins'] = asins
-
     return {'target_values': rows,
-            'related_asins': related_asins}
+            'raw_data': product_data}
