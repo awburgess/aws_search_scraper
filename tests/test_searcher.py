@@ -4,6 +4,7 @@ Unit tests for searcher.py
 
 import pytest
 import requests_mock
+from typing import NoReturn
 
 import aws_searcher.searcher as searcher
 

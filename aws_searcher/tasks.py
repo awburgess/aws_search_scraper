@@ -14,7 +14,7 @@ import aws_searcher.config as config
 import aws_searcher.mws_api as mws_api
 
 
-def get_asin_data(asin_list: List[str], marketplace_id: str) -> Dict[str, list]:
+def get_asin_data(asin_list: List[str], marketplace_id: str) -> Dict[str, list]:  # pragma: no cover
     """
     Call the Amazon MWS api and return a dictionary with 'target_values',
     'related_asins' as keys, where 'target_values' are a list of
@@ -35,7 +35,7 @@ def get_asin_data(asin_list: List[str], marketplace_id: str) -> Dict[str, list]:
 
 def get_asins_from_amazon_search_page(category: str,
                                       search_terms: str,
-                                      page_number: int) -> List[str]:
+                                      page_number: int) -> List[str]:  # pragma: no cover
     """
     Get a list of ASINs from amazon search pages, must know specific page numbers else
     returns empty list
@@ -90,7 +90,7 @@ def serialize_data_to_json(data: List[Dict[str, str]], directory: Path) -> NoRet
         json.dump(data, outfile)
 
 
-def combine_json_files(name: str):
+def combine_json_files(name: str):  # pragma: no cover
     """
     Collect all output json files, combine into one list, re-serialize to single file
 
@@ -162,7 +162,7 @@ def extract_relationships_from_json(asin: str, relationship_dict: dict) -> List[
                 for related_asins in related_asins_list]
 
 
-def get_first_page(category: str, search_terms: str) -> dict:
+def get_first_page(category: str, search_terms: str) -> dict:  # pragma: no cover
     """
     Get the first search result page and return initial ASINs and
     the pagination limit
@@ -182,7 +182,7 @@ def get_first_page(category: str, search_terms: str) -> dict:
     return {'asins': asins, 'last_page_number': last_page}
 
 
-def remove_files(data_dir: Path, extension: str) -> NoReturn:
+def remove_files(data_dir: Path, extension: str) -> NoReturn:  # pragma: no cover
     """
     Remove iterative files used to combine into final result
 
@@ -191,7 +191,7 @@ def remove_files(data_dir: Path, extension: str) -> NoReturn:
         extension: extension to target for removal
 
     """
-    for file in data_dir.glob('*.' +  extension):
+    for file in data_dir.glob('*.' + extension):
         file.unlink()
 
 
@@ -210,7 +210,7 @@ def grouper(n, iterable) -> List[List[str]]:
     return list(([e for e in t if e is not None] for t in itertools.zip_longest(*args)))
 
 
-def page_worker(page_q: Queue, asin_q: Queue, processed_q: Queue):
+def page_worker(page_q: Queue, asin_q: Queue, processed_q: Queue):  # pragma: no cover
     """
     Worker function for threading out asins from website pages
 
@@ -240,7 +240,7 @@ def page_worker(page_q: Queue, asin_q: Queue, processed_q: Queue):
         page_q.task_done()
 
 
-def api_worker(asin_q: Queue, processed_q: Queue, marketplace_id: str):
+def api_worker(asin_q: Queue, processed_q: Queue, marketplace_id: str):  # pragma: no cover
     """
     Worker function for threading out api calls
 

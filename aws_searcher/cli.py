@@ -9,9 +9,9 @@ import logging
 
 import pandas as pd
 
-import config
-import tasks
-import models
+import aws_searcher.config as config
+import aws_searcher.tasks as tasks
+import aws_searcher.models as models
 
 
 @click.command()

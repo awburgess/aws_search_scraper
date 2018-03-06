@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 from sqlalchemy import create_engine, Column, Integer, String, DateTime
-from sqlalchemy.ext.declarative import declarative_base, declared_attr
+from sqlalchemy.ext.declarative import declarative_base
 
 
 BASE = declarative_base()

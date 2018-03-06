@@ -81,9 +81,6 @@ def collect_target_pages_from_search_response(soup: BeautifulSoup) -> List[str]:
     return [url.replace('/dp/', '') for url in urls]
 
 
-# TODO: May need to derive from sellers (may not be directly present on page even)
-# TODO: Also condition for used (do new & used)
-# TODO: Capture shipping & tax if present
 def _extract_price(soup: BeautifulSoup) -> str:
     """
     Extract the price from the amazon page
@@ -97,7 +94,7 @@ def _extract_price(soup: BeautifulSoup) -> str:
     return soup.find('span', {'id': 'priceblock_ourprice'}).text
 
 
-def _extract_brand(soup: BeautifulSoup) -> str:
+def _extract_brand(soup: BeautifulSoup) -> str:  # pragma: no cover
     """
     Extract brand name (Or byline if not by authentic seller)
 
@@ -114,7 +111,6 @@ def _extract_brand(soup: BeautifulSoup) -> str:
     return re.findall(r'(?<=bin=).+$', image_brand_group.find('a')['href'])[0]
 
 
-# TODO: Parent title, need specific name (child title)
 def _extract_product_name(soup: BeautifulSoup) -> str:
     """
     Extract the product name (e.g. Roger's Big Ol' Dildos)
@@ -128,7 +124,7 @@ def _extract_product_name(soup: BeautifulSoup) -> str:
     return soup.find('span', {'id': 'productTitle'}).text.strip()
 
 
-def _extract_sellers(soup: BeautifulSoup) -> List[str]:
+def _extract_sellers(soup: BeautifulSoup) -> List[str]:  # pragma: no cover
     """
     Extract the names of sellers
 
@@ -147,7 +143,7 @@ def _extract_sellers(soup: BeautifulSoup) -> List[str]:
 
 
 def parse_product_page_details(asin_dictionary: dict, page: BeautifulSoup,
-                               stringify: bool = False) -> dict:
+                               stringify: bool = False) -> dict:  # pragma: no cover
     """
     Parse the desired details from a given page
 
