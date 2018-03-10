@@ -37,6 +37,8 @@ MARKETPLACE_IDS = {
     'US': 'ATVPDKIKX0DER'
 }
 
+GROUP_COUNT = 5
+
 CATEGORIES_DICT = {'Alexa Skills': 'search-alias=alexa-skills',
                    'All Departments': 'search-alias=aps',
                    'Amazon Devices': 'search-alias=amazon-devices',

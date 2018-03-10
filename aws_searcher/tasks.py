@@ -240,13 +240,17 @@ def page_worker(page_q: Queue, asin_q: Queue, processed_q: Queue):  # pragma: no
         page_q.task_done()
 
 
-def api_worker(asin_q: Queue, processed_q: Queue, marketplace_id: str):  # pragma: no cover
+def api_worker(asin_q: Queue,
+               processed_q: Queue,
+               blocker_q: Queue,
+               marketplace_id: str):  # pragma: no cover
     """
     Worker function for threading out api calls
 
     Args:
         asin_q: Queue with ASINs to be processed on MWS API
         processed_q: ASINs that have already been processed
+        blocker_q: ASINs that keep being tried but fail
         marketplace_id: String represeentation
 
     """
@@ -264,7 +268,12 @@ def api_worker(asin_q: Queue, processed_q: Queue, marketplace_id: str):  # pragm
             logging.warning("API is throttling")
             logging.warning("Pausing for a minute")
             asin_q.task_done()
+            for asin in queue_asin:
+                if asin in blocker_q:
+                    continue
             asin_q.put(queue_asin)
+            for item in queue_asin:
+                blocker_q.put(item)
             searcher.time.sleep(60)
             continue
 
