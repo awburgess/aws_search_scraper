@@ -55,6 +55,8 @@ def run(category, terms, market):
 
     asin_queue = Queue()
     processed_queue = Queue()
+    blocker_queue = Queue()
+
     for asin_group in tasks.grouper(5, first_page_dict['asins']):
         asin_queue.put(asin_group)
 
@@ -75,6 +77,7 @@ def run(category, terms, market):
     for thread_number in range(4):
         worker = threading.Thread(target=tasks.api_worker, args=(asin_queue,
                                                                  processed_queue,
+                                                                 blocker_queue,
                                                                  market,))
         worker.setDaemon(True)
         worker.start()
@@ -86,10 +89,13 @@ def run(category, terms, market):
 
     logging.info("Collecting output data for db load and final output")
     all_data_files = pd.concat(pd.read_csv(f.as_posix()) for f in data_dir.glob('*.csv'))
+    all_data_files['job'] = job_id
 
     all_relationship_files = pd.concat(pd.read_csv(f.as_posix()) for f in data_dir.glob('*.dat'))
+    all_relationship_files['job'] = job_id
 
     all_attribute_files = pd.concat(pd.read_csv(f.as_posix()) for f in data_dir.glob('*.txt'))
+    all_attribute_files['job'] = job_id
 
     tasks.remove_files(data_dir, 'csv')
     tasks.remove_files(data_dir, 'txt')
@@ -98,6 +104,7 @@ def run(category, terms, market):
     out_data_csv = this_job_dir / (output_name + '.csv')
     out_relationship_csv = this_job_dir / (output_name + '_relationships.csv')
     out_attributes_csv = this_job_dir / (output_name + '_attributes.csv')
+    failed_asins_txt = this_job_dir / (output_name + '_failed_asins.txt')
 
     logging.info("Saving %s" % out_data_csv)
     all_data_files.to_csv(out_data_csv.as_posix(), index=False)
@@ -116,6 +123,13 @@ def run(category, terms, market):
     logging.info("Inserting attributes into database")
     all_attribute_files.to_sql('attributes_' + str(job_id), con=engine, if_exists='append',
                                index=False)
+
+    failed_asins_list = list(blocker_queue.queue)
+    if failed_asins_list:
+        logging.warning("Serializing failed asins, total %d" % len(failed_asins_list))
+        with failed_asins_txt.open('w') as outfile:
+            outfile.write(','.join(failed_asins_list))
+        logging.warning("Failed ASINs are failed")
 
     logging.info("Run complete")
 

@@ -1,5 +1,13 @@
 FROM ubuntu:16.04
 
+ARG MWS_ACCESS_KEY
+ARG MWS_SECRET_KEY
+ARG SELLER_ID
+
+ENV MWS_ACCESS_KEY $MWS_ACCESS_KEY
+ENV MWS_SECRET_KEY $MWS_SECRET_KEY
+ENV SELLER_ID $SELLER_ID
+
 RUN apt-get update
 RUN apt-get install -y software-properties-common
 RUN apt-get install -y wget
@@ -18,12 +26,9 @@ RUN wget https://www.python.org/ftp/python/3.6.3/Python-3.6.3.tgz && \
 
 RUN apt-get update
 
-RUN mkdir /home/amazon
-RUN mkdir /home/amazon/data
-RUN mkdir /home/amazon/code
-
-COPY . /home/amazon/code
-WORKDIR /home/amazon/code
+RUN mkdir -p /winshares/user
+COPY . /searcher
+WORKDIR /searcher
 
 RUN pip3.6 install requirements.txt
 

@@ -1,7 +1,7 @@
 """
 Functions for accessing MWS API and handling responses
 """
-
+import os
 from operator import getitem
 from functools import reduce
 from typing import List
@@ -13,7 +13,7 @@ import aws_searcher.config as config
 
 class TooManyASINS(Exception):  # pragma: no cover
     """
-    Custom exception class for when there are more than 5 asins requested
+    Custom exception class for when there are more than n asins requested
     """
     pass
 
@@ -25,9 +25,9 @@ def _get_product_object() -> Products:  # pragma: no cover
     Returns:
         Products object
     """
-    return Products(access_key='AKIAJICBE76XQKHWUTLA', #os.getenv('MWS_ACCESS_KEY'),
-                    secret_key='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', #os.getenv('MWS_SECRET_KEY'),
-                    account_id='AQ5JN7IFU4T3S') # os.getenv('SELLER_ID'))
+    return Products(access_key=os.getenv('MWS_ACCESS_KEY'),
+                    secret_key=os.getenv('MWS_SECRET_KEY'),
+                    account_id=os.getenv('SELLER_ID'))
 
 
 def _extract_values_by_target_keys(keys: List[str], json_response: dict) -> str:
@@ -92,8 +92,8 @@ def acquire_mws_product_data(marketplace: str, asins: List[str]) -> dict:  # pra
         "target_values" key will house a list of dictionaries as rows.  The related asins will
         be a list of asin strings to possibly add to Queue
     """
-    if len(asins) > 5:
-        raise TooManyASINS("Maximum 5 ASINs in any one request")
+    if len(asins) > config.GROUP_COUNT:
+        raise TooManyASINS("Maximum %d ASINs in any one request" % config.GROUP_COUNT)
 
     products_obj = _get_product_object()
     product_data = products_obj.get_matching_product(marketplace, asins).parsed
