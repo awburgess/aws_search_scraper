@@ -1,11 +1,13 @@
 """
 SQLAlchemy models for MWS results and jobs
 """
+from typing import List
 from datetime import datetime
 from pathlib import Path
 
 from sqlalchemy import create_engine, Column, Integer, String, DateTime
 from sqlalchemy.ext.declarative import declarative_base
+import sqlalchemy
 
 
 BASE = declarative_base()
@@ -20,7 +22,7 @@ class Jobs(BASE):
     run_date = Column(DateTime, default=datetime.now())
 
 
-def get_engine(sqlite_path: Path):
+def get_engine(sqlite_path: Path) -> sqlalchemy.engine:
     """
     Create SQLAlchemy engine for SQLite
 
@@ -31,3 +33,17 @@ def get_engine(sqlite_path: Path):
         SQLAlchemy engine for SQLite db
     """
     return create_engine('sqlite:///' + sqlite_path.as_posix())
+
+
+def query_jobs(engine: sqlalchemy.engine) -> List[dict]:
+    """
+    Query all retained jobs
+
+    Args:
+        engine: SQLAlchemy eninge
+
+    Returns:
+        List of dictionaries as rows
+    """
+    jobs = engine.execute("""SELECT cast(id as text), category, terms, run_date from jobs""").fetchall()
+    return [row.values() for row in jobs]
