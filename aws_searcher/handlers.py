@@ -31,6 +31,17 @@ def home():
     return render_template('index.html', categories=config.CATEGORIES_DICT)
 
 
+@app.route('/job')
+def job_page():
+    """
+    Get page for rendering job data
+
+    Returns:
+        Renders data page
+    """
+    return render_template('job_page.html')
+
+
 @socketio.on('connected')
 def connector():
     """
@@ -40,6 +51,32 @@ def connector():
     _CURRENT_IP = get_public_ip_address()
     logging.info('Current IP: %s' % _CURRENT_IP)
     jobs = query_jobs(_ENGINE)
-    headers = [{'title': column} for column in ['id', 'category', 'terms', 'run_date']]
+    headers = [{'title': column, 'class': 'jobid'} if column == 'id' else {'title': column}
+               for column in ['id', 'category', 'terms', 'run_date']]
     socketio.emit('jobs', {'data': {'headers': headers, 'rows': jobs}}, json=True)
 
+
+@socketio.on('getJob')
+def get_job(job_json):
+    """
+    Handler for getting details on job by request
+
+    Args:
+        job_json: JSON object job number
+
+    """
+    rows_query = config.ROWS_QUERY.format(job=job_json['job'])
+    relationships_query = config.RELATIONSHIP_QUERY.format(job=job_json['job'])
+
+    rows_result = _ENGINE.execute(rows_query).fetchall()
+
+    rows_header = [{'title': col} for col in rows_result[0].keys()]
+    rows_data = [row.values() for row in rows_result]
+    relationship_data = [relationship.values()
+                         for relationship in _ENGINE.execute(relationships_query).fetchall()]
+    relationship_headers = ['relationship', 'relative', 'asin', 'job']
+
+    socketio.emit('jobResult', {'rows': rows_data,
+                                'row_headers': rows_header,
+                                'relationships': relationship_data,
+                                'relationship_headers': relationship_headers}, json=True)

@@ -1,12 +1,16 @@
-/*#title {*/
-    /*color: #111;*/
-    /*font-family: 'Helvetica Neue', sans-serif;*/
-    /*font-size: 500px;*/
-    /*font-weight: bold;*/
-    /*text-align: center;*/
-    /*margin: auto;*/
-/*}*/
-
 .row-grid {
-    margin-top: 100px;
+    margin-top: 50px;
+}
+
+#fullScreen {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    left:100%;
+    top:0;
+    background: red;
+    transition: left 1s;
+}
+#fullScreen.in {
+    left:0;
 }

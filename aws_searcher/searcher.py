@@ -14,8 +14,12 @@ from itertools import chain
 import requests
 from bs4 import BeautifulSoup
 
-from aws_searcher.logger import logger
-import aws_searcher.config as config
+try:
+    from logger import logger
+    import config
+except ModuleNotFoundError:
+    from aws_searcher.logger import logger
+    import aws_searcher.config as config
 
 LOGGER = logger('aws_scanner')
 
@@ -219,6 +223,8 @@ def serialize_to_csv(data: List[dict], file_path: Path,
         write_mode: Indicate whether this should be a single write or append
 
     """
+    if not data:
+        return
     headers = list(set(chain(*[list(row.keys()) for row in data])))
     with file_path.open(write_mode) as outfile:
         headers = headers if not declared_headers else declared_headers
@@ -240,5 +246,10 @@ def get_pagination(soup: BeautifulSoup) -> int:
         Integer representation of the last page number of result
 
     """
-    return int(soup.find('span', {'class': 'pagnDisabled'}).text)
+    last_page_number = soup.find('span', {'class': 'pagnDisabled'})
+    if not last_page_number:
+
+        last_page_number = soup.find_all('span', {'class': 'pagnLink'})[-1]
+
+    return int(last_page_number.text)
 

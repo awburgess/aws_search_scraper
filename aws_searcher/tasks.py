@@ -9,10 +9,14 @@ import json
 import logging
 import itertools
 
-import aws_searcher.searcher as searcher
-import aws_searcher.config as config
-import aws_searcher.mws_api as mws_api
-
+try:
+    import searcher
+    import config
+    import mws_api
+except ModuleNotFoundError:
+    import aws_searcher.searcher as searcher
+    import aws_searcher.config as config
+    import aws_searcher.mws_api as mws_api
 
 def get_asin_data(asin_list: List[str], marketplace_id: str) -> Dict[str, list]:  # pragma: no cover
     """
@@ -210,14 +214,13 @@ def grouper(n, iterable) -> List[List[str]]:
     return list(([e for e in t if e is not None] for t in itertools.zip_longest(*args)))
 
 
-def page_worker(page_q: Queue, asin_q: Queue, processed_q: Queue):  # pragma: no cover
+def page_worker(page_q: Queue, asin_q: Queue):  # pragma: no cover
     """
     Worker function for threading out asins from website pages
 
     Args:
         page_q: Queue with arg dicts for get_asins_from_amazon_search_page
         asin_q: Queue with ASINs to be processed on MWS API
-        processed_q: ASINs that have already been processed
 
     """
     while True:
@@ -232,9 +235,6 @@ def page_worker(page_q: Queue, asin_q: Queue, processed_q: Queue):  # pragma: no
         sub_groups = grouper(5, asin_list)
 
         for group in sub_groups:
-            for asin in group:
-                if asin not in processed_q.queue:
-                    group.remove(asin)
             if group:
                 asin_q.put(group)
         page_q.task_done()
@@ -269,7 +269,7 @@ def api_worker(asin_q: Queue,
             logging.warning("Pausing for a minute")
             asin_q.task_done()
             for asin in queue_asin:
-                if asin in blocker_q:
+                if asin in list(blocker_q.queue):
                     continue
             asin_q.put(queue_asin)
             for item in queue_asin:
@@ -287,9 +287,15 @@ def api_worker(asin_q: Queue,
         attributes = []
         relationships = []
         for data in asin_data_dict['raw_data']:
-            attributes.append(flatten_item_attributes(
-                data['Product']['AttributeSets']['ItemAttributes']
-            ))
+            try:
+                row_attr = {'asin': data['ASIN']['value']}
+                row_attr.update(flatten_item_attributes(
+                    data['Product']['AttributeSets']['ItemAttributes']
+                ))
+                attributes.append(row_attr)
+            except KeyError:
+                blocker_q.put(data['ASIN']['value'])
+                continue
             relationships = relationships + extract_relationships_from_json(data['ASIN']['value'],
                                                                             data['Product'][
                                                                                 'Relationships'])

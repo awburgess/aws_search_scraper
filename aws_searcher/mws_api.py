@@ -8,7 +8,10 @@ from typing import List
 
 from mws import Products
 
-import aws_searcher.config as config
+try:
+    import config as config
+except ModuleNotFoundError:
+    import aws_searcher.config as config
 
 
 class TooManyASINS(Exception):  # pragma: no cover
@@ -25,9 +28,9 @@ def _get_product_object() -> Products:  # pragma: no cover
     Returns:
         Products object
     """
-    return Products(access_key=os.getenv('MWS_ACCESS_KEY'),
-                    secret_key=os.getenv('MWS_SECRET_KEY'),
-                    account_id=os.getenv('SELLER_ID'))
+    return Products(access_key='AKIAJICBE76XQKHWUTLA', #os.getenv('MWS_ACCESS_KEY'),
+                    secret_key='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', #os.getenv('MWS_SECRET_KEY'),
+                    account_id='AQ5JN7IFU4T3S') # os.getenv('SELLER_ID'))
 
 
 def _extract_values_by_target_keys(keys: List[str], json_response: dict) -> str:

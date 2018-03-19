@@ -9,10 +9,14 @@ import logging
 
 import pandas as pd
 
-import aws_searcher.config as config
-import aws_searcher.tasks as tasks
-import aws_searcher.models as models
-
+try:
+    import config as config
+    import tasks as tasks
+    import models as models
+except ImportError:
+    import aws_searcher.config as config
+    import aws_searcher.tasks as tasks
+    import aws_searcher.models as models
 
 @click.command()
 @click.option('--category', help="Amazon Search Category")
@@ -67,8 +71,7 @@ def run(category, terms, market):
 
     for thread_number in range(4):
         worker = threading.Thread(target=tasks.page_worker, args=(page_queue,
-                                                                  asin_queue,
-                                                                  processed_queue,))
+                                                                  asin_queue))
         worker.setDaemon(True)
         worker.start()
 
