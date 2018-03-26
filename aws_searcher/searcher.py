@@ -248,8 +248,10 @@ def get_pagination(soup: BeautifulSoup) -> int:
     """
     last_page_number = soup.find('span', {'class': 'pagnDisabled'})
     if not last_page_number:
-
-        last_page_number = soup.find_all('span', {'class': 'pagnLink'})[-1]
+        try:
+            last_page_number = soup.find_all('span', {'class': 'pagnLink'})[-1]
+        except IndexError:
+            return 1
 
     return int(last_page_number.text)
 

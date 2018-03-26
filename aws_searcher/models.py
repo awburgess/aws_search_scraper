@@ -45,5 +45,6 @@ def query_jobs(engine: sqlalchemy.engine) -> List[dict]:
     Returns:
         List of dictionaries as rows
     """
-    jobs = engine.execute("""SELECT cast(id as text), category, terms, run_date from jobs""").fetchall()
-    return [row.values() for row in jobs]
+    headers = ['id', 'category', 'terms', 'runDate']
+    jobs = engine.execute("""SELECT cast(id as text) as id, category, terms, run_date from jobs""").fetchall()
+    return [dict(zip(headers, row.values())) for row in jobs]

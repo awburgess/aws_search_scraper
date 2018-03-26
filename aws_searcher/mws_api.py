@@ -1,7 +1,7 @@
 """
 Functions for accessing MWS API and handling responses
 """
-import os
+import logging
 from operator import getitem
 from functools import reduce
 from typing import List
@@ -64,7 +64,7 @@ def _extract_target_data(data: dict) -> dict:
             for key in config.TARGET_KEYS}
 
 
-def _extract_asin_from_relationshp(relationship_dict: dict, key: str) -> List[str]:
+def _extract_asin_from_relationship(relationship_dict: dict, key: str) -> List[str]:
     """
     Extract list of ASINs (either parent or children)
 

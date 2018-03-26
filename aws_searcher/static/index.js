@@ -2,8 +2,10 @@ const socket = io.connect('http://' + document.domain + ':' + location.port)
 
 socket.on('connect', () => {socket.emit('connected')})
 
-$(document).on('click', '.jobid', (e) => {
-    const result = e.target.innerText
+$(document).on('click', '.job', (e) => {
+    const target = e.currentTarget.firstChild
+    const result = target.innerText || target.textContent
+    console.log(result)
     if (parseInt(result)) {
         socket.emit('getJob', {job: parseInt(result)})
     }
@@ -14,12 +16,26 @@ $(document).ready(() => {
     $('#submit').click()
 })
 
+const addTableRowClass = () => {
+    const rows = $('#jobsTable').children("tbody").children();
+    $(rows).each((index, el) => {
+        $(el).addClass('job')
+    })
+}
+
+$(document).on('click', '#close', () => {
+    $('#results').css('width', '0%')
+})
+
 socket.on('jobs', (response) => {
     data = response.data
-    $('#jobsTable').DataTable({
-        data: data.rows,
-        columns: data.headers
-    })
+    $('#jobsTable').dynatable({
+        dataset: {
+            records: data.rows
+        }
+    }).bind('dynatable:afterProcess', addTableRowClass)
+
+    addTableRowClass()
 })
 
 socket.on('jobResult', (response) => {
@@ -28,16 +44,22 @@ socket.on('jobResult', (response) => {
     const relationshipRows = response.relationships
     const relationshipHeaders = response.relationship_headers
 
-    $('#rowsTable').DataTable({
-        data: rows,
-        columns: rowHeaders,
-        dom: 'Bfrtip',
-        buttons: [
-            'copy', 'csv', 'excel', 'pdf', 'print'
-        ]
+    $.each(rowHeaders, (index, value) => {
+        $('#resultHeaders').append('<th>' + value + '</th>')
     })
 
-    $('#fullScreen').addClass('in')
+    console.log(rows)
+
+    $('#rowsTable').dynatable({
+        table: {
+            defaultColumnIdStyle: 'lowercase'
+        },
+        dataset: {
+            records: rows
+        }
+    })
+
+    $('#results').css('width', '100%')
 })
 
 

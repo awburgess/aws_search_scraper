@@ -17,5 +17,3 @@ def get_public_ip_address() -> str:
         logging.warning("Unable to reach jsonip.com, Public IP Unknown")
         return '127.0.0.1'
     return json_ip.json()['ip']
-
-

@@ -44,7 +44,7 @@ def relationship_dicts() -> dict:
     }
 
     children = {
-        'VariationChildren': [{
+        'VariationChild': [{
             'Identifiers': {
                 'MarketplaceASIN': {
                     'ASIN': {
@@ -94,11 +94,11 @@ def test_extract_asin_from_relationship(relationship_dicts):
     Test extract_asin_from_relationship
 
     """
-    parent_result = api._extract_asin_from_relationshp(relationship_dicts['parent'],
+    parent_result = api._extract_asin_from_relationship(relationship_dicts['parent'],
                                                        'VariationParent')
 
-    children_result = api._extract_asin_from_relationshp(relationship_dicts['children'],
-                                                         'VariationChildren')
+    children_result = api._extract_asin_from_relationship(relationship_dicts['children'],
+                                                         'VariationChild')
 
     assert parent_result == ['TickleStick']
 

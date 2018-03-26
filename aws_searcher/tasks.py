@@ -18,6 +18,7 @@ except ModuleNotFoundError:
     import aws_searcher.config as config
     import aws_searcher.mws_api as mws_api
 
+
 def get_asin_data(asin_list: List[str], marketplace_id: str) -> Dict[str, list]:  # pragma: no cover
     """
     Call the Amazon MWS api and return a dictionary with 'target_values',
@@ -158,10 +159,10 @@ def extract_relationships_from_json(asin: str, relationship_dict: dict) -> List[
     if not relationship_dict:
         return [{'asin': asin, 'relationship': 'stand-alone', 'relative': ''}]
     relationship = list(relationship_dict.keys())[0]
-    related_asins_list = mws_api._extract_asin_from_relationshp(relationship_dict, relationship)
+    related_asins_list = mws_api._extract_asin_from_relationship(relationship_dict, relationship)
     if relationship == 'VariationParent':
         return [{'asin': asin, 'relationship': 'child', 'relative': related_asins_list[0]}]
-    else:
+    elif relationship == 'VariationChild':
         return [{'asin': related_asins, 'relationship': 'parent', 'relative': asin}
                 for related_asins in related_asins_list]
 
@@ -214,6 +215,19 @@ def grouper(n, iterable) -> List[List[str]]:
     return list(([e for e in t if e is not None] for t in itertools.zip_longest(*args)))
 
 
+def clean_groups(group: List[str]) -> List[str]:
+    """
+    Ensure empty strings and duplicates stay out of sub groups of ASINs
+
+    Args:
+        group: 5 or less ASINs in a List
+
+    Returns:
+        List with unique values and empty strings removed
+    """
+    return list(set([g for g in group if g.strip()]))
+
+
 def page_worker(page_q: Queue, asin_q: Queue):  # pragma: no cover
     """
     Worker function for threading out asins from website pages
@@ -235,8 +249,9 @@ def page_worker(page_q: Queue, asin_q: Queue):  # pragma: no cover
         sub_groups = grouper(5, asin_list)
 
         for group in sub_groups:
-            if group:
-                asin_q.put(group)
+            clean_group = clean_groups(group)
+            if clean_group:
+                asin_q.put(clean_group)
         page_q.task_done()
 
 
@@ -257,9 +272,12 @@ def api_worker(asin_q: Queue,
     while True:
         queue_asin = asin_q.get()
 
+        if not queue_asin:
+            continue
+
         log_asins = ', '.join(queue_asin)
 
-        logging.info("Processing ASINs: %s" % log_asins)
+        logging.info("Processing ASINs: %s" % queue_asin)
 
         try:
             asin_data_dict = mws_api.acquire_mws_product_data(marketplace_id, queue_asin)
@@ -287,18 +305,21 @@ def api_worker(asin_q: Queue,
         attributes = []
         relationships = []
         for data in asin_data_dict['raw_data']:
+            asin = data['ASIN']['value']
             try:
-                row_attr = {'asin': data['ASIN']['value']}
+                row_attr = {'asin': asin}
                 row_attr.update(flatten_item_attributes(
                     data['Product']['AttributeSets']['ItemAttributes']
                 ))
                 attributes.append(row_attr)
             except KeyError:
-                blocker_q.put(data['ASIN']['value'])
+                blocker_q.put(asin)
                 continue
-            relationships = relationships + extract_relationships_from_json(data['ASIN']['value'],
-                                                                            data['Product'][
-                                                                                'Relationships'])
+            new_relationships = extract_relationships_from_json(asin,
+                                                                data['Product'][
+                                                                    'Relationships'])
+
+            relationships = relationships + new_relationships
 
         write_path = Path.home() / config.DATA_DIRECTORY
 
@@ -321,14 +342,13 @@ def api_worker(asin_q: Queue,
         for asin in queue_asin:
             processed_q.put(asin, block=False)
 
-        related_asins = [related_dict['asin'] for related_dict in relationships]
+        related_asins = [related_dict['relative'] for related_dict in relationships]
         asins_add = grouper(5, related_asins)
 
         for group in asins_add:
-            for asin in group:
-                if asin in processed_q.queue:
-                    group.remove(asin)
-            if group:
-                asin_q.put(group)
+            clean_group = clean_groups(group)
+            refined_group = list(set([asin for asin in clean_group if asin not in processed_q.queue]))
+            if refined_group:
+                asin_q.put(refined_group)
 
         asin_q.task_done()
