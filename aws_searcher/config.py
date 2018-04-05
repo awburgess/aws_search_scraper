@@ -19,6 +19,8 @@ ASIN_KEY_LIST = ['ASIN', 'value']
 ROWS_QUERY = """SELECT * FROM attributes_{job}"""
 RELATIONSHIP_QUERY = """SELECT * FROM relationships WHERE asin in (SELECT asin from attributes_{job})"""
 
+CLI_RUN = """python {cli_file} --category \"{category}\" --terms \"{terms}\" --market {market}"""
+
 TARGET_KEYS = {
     'asin': ASIN_KEY_LIST,
     'brand': ITEM_ATTRIBUTE_KEY_LIST + ['Brand', 'value'],

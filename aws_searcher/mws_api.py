@@ -46,7 +46,7 @@ def _extract_values_by_target_keys(keys: List[str], json_response: dict) -> str:
     """
     try:
         return reduce(getitem, keys, json_response)
-    except KeyError:  # pragma: no cover
+    except (KeyError, TypeError):  # pragma: no cover
         return ''
 
 

@@ -140,8 +140,10 @@ def run(category, terms, market):
             outfile.write(','.join(failed_asins_list))
         logging.warning("Failed ASINs are failed")
 
-    logging.info("Run complete")
+    engine.execute("""UPDATE jobs SET status = 'Complete' WHERE id = {}""".format(job_id))
+    engine.dispose()
 
+    logging.info("Run complete")
 
 if __name__ == '__main__':
     run()

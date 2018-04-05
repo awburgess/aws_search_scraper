@@ -20,6 +20,7 @@ class Jobs(BASE):
     category = Column(String, nullable=False)
     terms = Column(String, nullable=False)
     run_date = Column(DateTime, default=datetime.now())
+    status = Column(String, nullable=False, default="Processing")
 
 
 def get_engine(sqlite_path: Path) -> sqlalchemy.engine:
@@ -45,6 +46,10 @@ def query_jobs(engine: sqlalchemy.engine) -> List[dict]:
     Returns:
         List of dictionaries as rows
     """
-    headers = ['id', 'category', 'terms', 'runDate']
-    jobs = engine.execute("""SELECT cast(id as text) as id, category, terms, run_date from jobs""").fetchall()
+    headers = ['id', 'category', 'terms', 'runDate', 'status']
+    try:
+        jobs = engine.execute("""SELECT cast(id as text) as id, category, terms, run_date, 
+                                status from jobs order by id desc""").fetchall()
+    except:
+        return []
     return [dict(zip(headers, row.values())) for row in jobs]
