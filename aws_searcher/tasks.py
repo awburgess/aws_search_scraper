@@ -280,7 +280,7 @@ def api_worker(asin_q: Queue,
         logging.info("Processing ASINs: %s" % queue_asin)
 
         try:
-            asin_data_dict = mws_api.acquire_mws_product_data(marketplace_id, queue_asin)
+            asin_data_dict = get_asin_data(queue_asin, marketplace_id)
         except Exception as e:
             logging.error(e)
             logging.warning("API is throttling")
