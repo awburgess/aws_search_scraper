@@ -16,6 +16,11 @@ AMAZON_SEARCH_URL_TEMPLATE = "https://www.amazon.com/s/ref=" \
 ITEM_ATTRIBUTE_KEY_LIST = ['Product', 'AttributeSets', 'ItemAttributes']
 ASIN_KEY_LIST = ['ASIN', 'value']
 
+ROWS_QUERY = """SELECT * FROM attributes_{job}"""
+RELATIONSHIP_QUERY = """SELECT * FROM relationships WHERE asin in (SELECT asin from attributes_{job})"""
+
+CLI_RUN = """python {cli_file} --category \"{category}\" --terms \"{terms}\" --market {market}"""
+
 TARGET_KEYS = {
     'asin': ASIN_KEY_LIST,
     'brand': ITEM_ATTRIBUTE_KEY_LIST + ['Brand', 'value'],
@@ -34,7 +39,9 @@ DB_DIRECTORY = 'mws/db'
 JOBS_DIRECTORY = 'mws/jobs'
 
 MARKETPLACE_IDS = {
-    'US': 'ATVPDKIKX0DER'
+    'US': 'ATVPDKIKX0DER',
+    'CANADA': 'A2EUQ1WTGCTBG2',
+    'MEXICO': 'A1AM78C64UM0Y8'
 }
 
 GROUP_COUNT = 5

@@ -9,9 +9,14 @@ import logging
 
 import pandas as pd
 
-import aws_searcher.config as config
-import aws_searcher.tasks as tasks
-import aws_searcher.models as models
+try:
+    import config as config
+    import tasks as tasks
+    import models as models
+except ImportError:
+    import aws_searcher.config as config
+    import aws_searcher.tasks as tasks
+    import aws_searcher.models as models
 
 
 @click.command()
@@ -23,9 +28,6 @@ def run(category, terms, market):
     Public Access Point
 
     """
-    logging.basicConfig(level=logging.INFO,
-                        format='%(asctime)s | %(threadName)s | %(levelname)s | %(message)s')
-
     data_dir = Path.home() / config.DATA_DIRECTORY
     db_dir = Path.home() / config.DB_DIRECTORY
     jobs_dir = Path.home() / config.JOBS_DIRECTORY
@@ -46,6 +48,13 @@ def run(category, terms, market):
 
     this_job_dir.mkdir(parents=True, exist_ok=True)
 
+    log_path = this_job_dir / (str(job_id) + '.log')
+    log_path.touch()
+    logging.basicConfig(filename=log_path.as_posix(),
+                        filemode='a',
+                        level=logging.INFO,
+                        format='%(asctime)s | %(threadName)s | %(levelname)s | %(message)s')
+
     output_name = '_'.join([category.lower(), terms.lower()])
 
     logging.info("Processing page 1")
@@ -58,7 +67,8 @@ def run(category, terms, market):
     blocker_queue = Queue()
 
     for asin_group in tasks.grouper(5, first_page_dict['asins']):
-        asin_queue.put(asin_group)
+        clean_group = tasks.clean_groups(asin_group)
+        asin_queue.put(clean_group)
 
     page_queue = Queue()
     pages = list(range(2, first_page_dict['last_page_number'] + 1))
@@ -67,8 +77,7 @@ def run(category, terms, market):
 
     for thread_number in range(4):
         worker = threading.Thread(target=tasks.page_worker, args=(page_queue,
-                                                                  asin_queue,
-                                                                  processed_queue,))
+                                                                  asin_queue))
         worker.setDaemon(True)
         worker.start()
 
@@ -131,8 +140,10 @@ def run(category, terms, market):
             outfile.write(','.join(failed_asins_list))
         logging.warning("Failed ASINs are failed")
 
-    logging.info("Run complete")
+    engine.execute("""UPDATE jobs SET status = 'Complete' WHERE id = {}""".format(job_id))
+    engine.dispose()
 
+    logging.info("Run complete")
 
 if __name__ == '__main__':
     run()

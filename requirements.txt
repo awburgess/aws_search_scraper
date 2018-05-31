@@ -9,3 +9,6 @@ pylint==1.8.2
 click==6.7
 pandas==0.22.0
 sqlalchemy==1.2.4
+flask==0.12.2
+flask-socketio==2.9.5
+eventlet==0.22.1
